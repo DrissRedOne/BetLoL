@@ -1,31 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
-import { registerSchema } from "@/lib/validators/auth";
-import { Swords, UserPlus } from "lucide-react";
+import { loginSchema } from "@/lib/validators/auth";
+import { Swords } from "lucide-react";
 
-export default function RegisterPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const redirect = searchParams.get("redirect") ?? "/";
+
+  useEffect(() => {
+    const callbackError = searchParams.get("error");
+    if (callbackError === "callback_failed") {
+      toast("Erreur lors de la connexion avec Google. Réessayez.", "error");
+    }
+  }, [searchParams, toast]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
 
-    const result = registerSchema.safeParse({ username, email, password });
+    const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of result.error.issues) {
@@ -38,48 +47,33 @@ export default function RegisterPage() {
 
     setLoading(true);
     const supabase = createClient();
-
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithPassword({
       email: result.data.email,
       password: result.data.password,
-      options: {
-        data: { username: result.data.username },
-      },
     });
 
     if (error) {
-      if (error.message.includes("already registered")) {
-        toast("Un compte existe déjà avec cet email", "error");
-      } else {
-        toast(error.message, "error");
-      }
+      toast("Email ou mot de passe incorrect", "error");
       setLoading(false);
       return;
     }
 
-    if (data.user && !data.session) {
-      // Email confirmation required
-      toast("Vérifiez votre email pour confirmer votre inscription", "info");
-      setLoading(false);
-      return;
-    }
-
-    toast("Inscription réussie ! Bienvenue sur BetLoL", "success");
-    router.push("/");
+    toast("Connexion réussie !", "success");
+    router.push(redirect);
     router.refresh();
   }
 
-  async function handleGoogleSignup() {
+  async function handleGoogleLogin() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
       },
     });
 
     if (error) {
-      toast("Erreur lors de l'inscription avec Google", "error");
+      toast("Erreur lors de la connexion avec Google", "error");
     }
   }
 
@@ -91,20 +85,11 @@ export default function RegisterPage() {
           <span className="text-[var(--accent-cyan)]">Bet</span>
           <span className="text-[var(--accent-gold)]">LoL</span>
         </h1>
-        <p className="text-[var(--text-muted)] mt-2">Créez votre compte</p>
+        <p className="text-[var(--text-muted)] mt-2">Connectez-vous à votre compte</p>
       </div>
 
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            id="username"
-            label="Pseudo"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="MonPseudo"
-            error={errors.username}
-            autoComplete="username"
-          />
           <Input
             id="email"
             label="Email"
@@ -121,14 +106,13 @@ export default function RegisterPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="6 caractères minimum"
+            placeholder="••••••••"
             error={errors.password}
-            autoComplete="new-password"
+            autoComplete="current-password"
           />
 
           <Button type="submit" className="w-full" loading={loading}>
-            <UserPlus className="h-4 w-4" />
-            Créer mon compte
+            Se connecter
           </Button>
         </form>
 
@@ -145,16 +129,16 @@ export default function RegisterPage() {
           type="button"
           variant="outline"
           className="w-full"
-          onClick={handleGoogleSignup}
+          onClick={handleGoogleLogin}
         >
           <GoogleIcon />
-          S&apos;inscrire avec Google
+          Continuer avec Google
         </Button>
 
         <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
-          Déjà un compte ?{" "}
-          <Link href="/auth/login" className="text-[var(--accent-cyan)] hover:underline">
-            Se connecter
+          Pas encore de compte ?{" "}
+          <Link href="/auth/register" className="text-[var(--accent-cyan)] hover:underline">
+            S&apos;inscrire
           </Link>
         </p>
       </Card>
@@ -184,3 +168,5 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+export { LoginForm };
