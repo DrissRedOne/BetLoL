@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 import { useEffect, useCallback, type ReactNode } from "react";
 
 interface ModalProps {
@@ -46,13 +47,23 @@ function Modal({ open, onClose, title, children, className }: ModalProps) {
       />
       <div
         className={cn(
-          "relative z-10 w-full max-w-md rounded-xl bg-[#111827] border border-white/[0.06] p-6",
-          "shadow-xl animate-in fade-in zoom-in-95 duration-200",
+          "relative z-10 w-full max-w-md rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-6",
+          "shadow-xl animate-slide-up",
           className
         )}
       >
         {title && (
-          <h2 className="mb-4 text-lg font-semibold text-[#E2E8F0]">{title}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+            <button
+              onClick={onClose}
+              className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors cursor-pointer"
+              aria-label="Fermer"
+              type="button"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         )}
         {children}
       </div>

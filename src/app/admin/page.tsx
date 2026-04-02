@@ -1,101 +1,86 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { formatAmount } from "@/lib/utils";
 import Link from "next/link";
-import { AdminCharts } from "./admin-charts";
+import { Shield, BarChart3, Trophy, Users } from "lucide-react";
 
-export default async function AdminDashboard() {
-  const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  if (!userData?.user) redirect("/auth/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userData.user.id)
-    .single();
-
-  if (profile?.role !== "admin") redirect("/");
-
-  const [
-    { count: totalUsers },
-    { count: totalBets },
-    { data: recentBets },
-    { count: liveMatches },
-    { count: upcomingMatches },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("bets").select("*", { count: "exact", head: true }),
-    supabase
-      .from("bets")
-      .select("amount, status, created_at")
-      .order("created_at", { ascending: false })
-      .limit(100),
-    supabase
-      .from("lol_matches")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "live"),
-    supabase
-      .from("lol_matches")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "upcoming"),
-  ]);
-
-  const totalVolume = (recentBets ?? []).reduce(
-    (sum, b) => sum + ((b as { amount: number }).amount ?? 0),
-    0
-  );
-
+export default function AdminDashboard() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Administration</h1>
+        <div className="flex items-center gap-2">
+          <Shield className="h-6 w-6 text-[var(--accent-gold)]" />
+          <h1 className="text-2xl font-bold font-[family-name:var(--font-display)]">
+            Administration
+          </h1>
+        </div>
         <div className="flex gap-2">
           <Link
             href="/admin/matchs"
-            className="rounded-lg bg-[#00D4FF]/10 px-3 py-1.5 text-sm text-[#00D4FF] hover:bg-[#00D4FF]/20 transition-colors"
+            className="rounded-lg bg-[var(--accent-cyan)]/10 px-3 py-1.5 text-sm text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)]/20 transition-colors"
           >
             Gérer les matchs
           </Link>
           <Link
             href="/admin/resultats"
-            className="rounded-lg bg-[#C89B3C]/10 px-3 py-1.5 text-sm text-[#C89B3C] hover:bg-[#C89B3C]/20 transition-colors"
+            className="rounded-lg bg-[var(--accent-gold)]/10 px-3 py-1.5 text-sm text-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/20 transition-colors"
           >
             Résultats
           </Link>
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats skeleton */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
-          <p className="text-xs text-[#64748B]">Utilisateurs</p>
-          <p className="text-2xl font-bold font-mono text-[#00D4FF]">{totalUsers ?? 0}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="h-4 w-4 text-[var(--accent-cyan)]" />
+            <p className="text-xs text-[var(--text-muted)]">Utilisateurs</p>
+          </div>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-cyan)]">
+            0
+          </p>
         </Card>
         <Card>
-          <p className="text-xs text-[#64748B]">Total paris</p>
-          <p className="text-2xl font-bold font-mono text-[#C89B3C]">{totalBets ?? 0}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <BarChart3 className="h-4 w-4 text-[var(--accent-gold)]" />
+            <p className="text-xs text-[var(--text-muted)]">Total paris</p>
+          </div>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-gold)]">
+            0
+          </p>
         </Card>
         <Card>
-          <p className="text-xs text-[#64748B]">Volume récent</p>
-          <p className="text-2xl font-bold font-mono text-[#00FF87]">{formatAmount(totalVolume)}</p>
+          <p className="text-xs text-[var(--text-muted)]">Volume récent</p>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-green)]">
+            0,00 €
+          </p>
         </Card>
         <Card>
-          <p className="text-xs text-[#64748B]">Matchs</p>
-          <p className="text-2xl font-bold font-mono">
-            <span className="text-[#FF4655]">{liveMatches ?? 0}</span>
-            <span className="text-[#64748B] text-sm"> live</span>
-            {" / "}
-            <span className="text-[#00D4FF]">{upcomingMatches ?? 0}</span>
-            <span className="text-[#64748B] text-sm"> à venir</span>
+          <div className="flex items-center gap-2 mb-1">
+            <Trophy className="h-4 w-4 text-[var(--accent-red)]" />
+            <p className="text-xs text-[var(--text-muted)]">Matchs</p>
+          </div>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)]">
+            <span className="text-[var(--accent-red)]">0</span>
+            <span className="text-[var(--text-muted)] text-sm"> live</span>
           </p>
         </Card>
       </div>
 
-      {/* Charts */}
-      <AdminCharts bets={recentBets as Array<{ amount: number; status: string; created_at: string }> ?? []} />
+      {/* Charts placeholder */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <h3 className="text-sm font-semibold mb-4">Volume quotidien (€)</h3>
+          <div className="h-[250px] rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] flex items-center justify-center">
+            <span className="text-sm text-[var(--text-muted)]">Graphique Recharts (placeholder)</span>
+          </div>
+        </Card>
+        <Card>
+          <h3 className="text-sm font-semibold mb-4">Répartition des paris</h3>
+          <div className="h-[250px] rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] flex items-center justify-center">
+            <span className="text-sm text-[var(--text-muted)]">Graphique Recharts (placeholder)</span>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -8,14 +8,14 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-white/10 text-[#E2E8F0]",
-  live: "bg-[#FF4655]/20 text-[#FF4655] animate-pulse",
-  upcoming: "bg-[#00D4FF]/20 text-[#00D4FF]",
-  finished: "bg-white/10 text-[#64748B]",
-  cancelled: "bg-white/5 text-[#64748B] line-through",
-  won: "bg-[#00FF87]/20 text-[#00FF87]",
-  lost: "bg-[#FF4655]/20 text-[#FF4655]",
-  league: "bg-[#C89B3C]/20 text-[#C89B3C]",
+  default: "bg-white/10 text-[var(--text-primary)]",
+  live: "bg-[var(--accent-red)]/20 text-[var(--accent-red)] animate-pulse",
+  upcoming: "bg-[var(--accent-cyan)]/20 text-[var(--accent-cyan)]",
+  finished: "bg-white/10 text-[var(--text-muted)]",
+  cancelled: "bg-white/5 text-[var(--text-muted)] line-through",
+  won: "bg-[var(--accent-green)]/20 text-[var(--accent-green)]",
+  lost: "bg-[var(--accent-red)]/20 text-[var(--accent-red)]",
+  league: "bg-[var(--accent-gold)]/20 text-[var(--accent-gold)]",
 };
 
 function Badge({ variant = "default", className, children, ...props }: BadgeProps) {
@@ -29,7 +29,7 @@ function Badge({ variant = "default", className, children, ...props }: BadgeProp
       {...props}
     >
       {variant === "live" && (
-        <span className="h-1.5 w-1.5 rounded-full bg-[#FF4655]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-red)]" />
       )}
       {children}
     </span>

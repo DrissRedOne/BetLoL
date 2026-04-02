@@ -1,35 +1,78 @@
+/* ============================================
+   Google Fonts CDN — must be before tailwindcss
+   ============================================ */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
 @import "tailwindcss";
 
+/* Clash Display — fallback to system bold if not locally installed */
 @font-face {
-  font-family: "DM Sans";
-  src: url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+  font-family: "Clash Display";
+  font-weight: 400 700;
+  font-display: swap;
+  src: local("Clash Display"), local("ClashDisplay-Variable");
 }
 
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
-}
+/* ============================================
+   CSS Variables — Thème LoL sombre
+   ============================================ */
+:root {
+  /* Fonds */
+  --bg-primary: #0A0E17;
+  --bg-card: #111827;
+  --bg-card-hover: #1a2332;
+  --border-subtle: rgba(255, 255, 255, 0.06);
 
-@theme inline {
-  --color-background: #0A0E17;
-  --color-foreground: #E2E8F0;
-  --color-card: #111827;
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-accent-cyan: #00D4FF;
-  --color-accent-gold: #C89B3C;
-  --color-accent-green: #00FF87;
-  --color-accent-red: #FF4655;
-  --color-text-muted: #64748B;
-  --font-sans: "DM Sans", system-ui, sans-serif;
+  /* Accents */
+  --accent-cyan: #00D4FF;
+  --accent-gold: #C89B3C;
+  --accent-green: #00FF87;
+  --accent-red: #FF4655;
+
+  /* Texte */
+  --text-primary: #E2E8F0;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Polices */
+  --font-display: "Clash Display", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
+/* ============================================
+   Tailwind v4 @theme inline — expose en classes
+   ============================================ */
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--bg-card);
+  --color-card-hover: var(--bg-card-hover);
+  --color-border: var(--border-subtle);
+  --color-cyan: var(--accent-cyan);
+  --color-gold: var(--accent-gold);
+  --color-green: var(--accent-green);
+  --color-red: var(--accent-red);
+  --color-muted: var(--text-muted);
+  --color-secondary: var(--text-secondary);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
 }
 
+/* ============================================
+   Base
+   ============================================ */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+/* ============================================
+   Keyframes
+   ============================================ */
 @keyframes odds-flash-up {
   0%, 100% { background-color: transparent; }
   50% { background-color: rgba(0, 255, 135, 0.15); }
@@ -50,6 +93,11 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 212, 255, 0.1); }
+  50% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.25); }
+}
+
 .odds-flash-up {
   animation: odds-flash-up 0.6s ease-out;
 }
@@ -66,7 +114,23 @@ body {
   animation: slide-up 0.3s ease-out;
 }
 
-/* Scrollbar styling */
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   Glassmorphism helper
+   ============================================ */
+.glass {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -82,4 +146,13 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hide scrollbar for horizontal scroll containers */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

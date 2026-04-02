@@ -1,68 +1,86 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import type { BetWithDetails } from "@/types";
-import { BetHistory } from "@/components/bet/bet-history";
 import { Card } from "@/components/ui/card";
-import { formatAmount } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { ClipboardList } from "lucide-react";
 
-export default async function MesBetsPage() {
-  const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-
-  if (!userData?.user) {
-    redirect("/auth/login");
-  }
-
-  const { data: bets } = await supabase
-    .from("bets")
-    .select("*, lol_matches(*), odds(*)")
-    .eq("user_id", userData.user.id)
-    .order("created_at", { ascending: false });
-
-  const typedBets = (bets ?? []) as BetWithDetails[];
-
-  const pendingBets = typedBets.filter((b) => b.status === "pending");
-  const settledBets = typedBets.filter((b) => b.status !== "pending");
-
-  const totalWon = typedBets
-    .filter((b) => b.status === "won")
-    .reduce((sum, b) => sum + b.potential_gain, 0);
-  const totalLost = typedBets
-    .filter((b) => b.status === "lost")
-    .reduce((sum, b) => sum + b.amount, 0);
-
+export default function MesBetsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Mes paris</h1>
+      <h1 className="text-2xl font-bold font-[family-name:var(--font-display)] mb-6">
+        Mes paris
+      </h1>
 
-      {/* Stats */}
+      {/* Stats skeleton */}
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         <Card>
-          <p className="text-xs text-[#64748B]">Paris en cours</p>
-          <p className="text-2xl font-bold font-mono text-[#00D4FF]">{pendingBets.length}</p>
+          <p className="text-xs text-[var(--text-muted)]">Paris en cours</p>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-cyan)]">
+            0
+          </p>
         </Card>
         <Card>
-          <p className="text-xs text-[#64748B]">Total gagné</p>
-          <p className="text-2xl font-bold font-mono text-[#00FF87]">{formatAmount(totalWon)}</p>
+          <p className="text-xs text-[var(--text-muted)]">Total gagné</p>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-green)]">
+            0,00 €
+          </p>
         </Card>
         <Card>
-          <p className="text-xs text-[#64748B]">Total misé (perdu)</p>
-          <p className="text-2xl font-bold font-mono text-[#FF4655]">{formatAmount(totalLost)}</p>
+          <p className="text-xs text-[var(--text-muted)]">Total misé (perdu)</p>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-red)]">
+            0,00 €
+          </p>
         </Card>
       </div>
 
-      {/* Pending bets */}
-      {pendingBets.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">En attente</h2>
-          <BetHistory bets={pendingBets} />
-        </section>
-      )}
+      {/* Empty state */}
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+          <ClipboardList className="h-8 w-8 text-[var(--text-muted)]" />
+        </div>
+        <p className="text-[var(--text-muted)]">
+          Connectez-vous pour voir vos paris
+        </p>
+      </div>
 
-      {/* Settled bets */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">Historique</h2>
-        <BetHistory bets={settledBets} emptyMessage="Aucun pari résolu pour le moment" />
+      {/* Skeleton bet cards */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold mb-4">Aperçu du design</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[
+            { status: "won" as const, label: "Gagné" },
+            { status: "lost" as const, label: "Perdu" },
+            { status: "upcoming" as const, label: "En attente" },
+          ].map((item) => (
+            <Card key={item.label}>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="league">LEC</Badge>
+                <Badge variant={item.status}>{item.label}</Badge>
+              </div>
+              <p className="text-sm font-medium truncate">Équipe A vs Équipe B</p>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Sélection</p>
+                  <p className="font-medium">Équipe A</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Cote</p>
+                  <p className="font-[family-name:var(--font-mono)] text-[var(--accent-gold)]">
+                    1.85
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Mise</p>
+                  <p className="font-[family-name:var(--font-mono)]">10,00 €</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Gain</p>
+                  <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--accent-green)]">
+                    18,50 €
+                  </p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </section>
     </div>
   );
