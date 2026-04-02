@@ -1,10 +1,48 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import type { LolMatch, Odd } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Swords, Trophy, Zap } from "lucide-react";
+import { MatchCard } from "@/components/match/match-card";
+import { Swords } from "lucide-react";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+
+  const [{ data: liveRaw }, { data: upcomingRaw }] = await Promise.all([
+    supabase
+      .from("lol_matches")
+      .select("*")
+      .eq("status", "live")
+      .order("starts_at", { ascending: true })
+      .limit(6),
+    supabase
+      .from("lol_matches")
+      .select("*")
+      .eq("status", "upcoming")
+      .order("starts_at", { ascending: true })
+      .limit(9),
+  ]);
+
+  const liveMatches = (liveRaw ?? []) as unknown as LolMatch[];
+  const upcomingMatches = (upcomingRaw ?? []) as unknown as LolMatch[];
+
+  const allIds = [...liveMatches, ...upcomingMatches].map((m) => m.id);
+  const oddsMap: Record<string, Odd> = {};
+
+  if (allIds.length > 0) {
+    const { data: oddsRaw } = await supabase
+      .from("odds")
+      .select("*")
+      .in("match_id", allIds)
+      .eq("bet_type", "match_winner")
+      .eq("is_active", true);
+
+    for (const odd of (oddsRaw ?? []) as unknown as Odd[]) {
+      oddsMap[odd.match_id] = odd;
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       {/* Hero */}
@@ -30,50 +68,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Live section placeholder */}
-      <section className="mb-10">
-        <div className="flex items-center gap-2 mb-4">
-          <Badge variant="live">EN DIRECT</Badge>
-          <h2 className="text-xl font-semibold">Matchs en cours</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} glass>
-              <div className="flex items-center justify-between mb-3">
-                <Badge variant="league">LCK</Badge>
-                <Badge variant="live">EN DIRECT</Badge>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-4">
-                <div className="flex flex-col items-center flex-1">
-                  <div className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center">
-                    <Zap className="h-6 w-6 text-[var(--text-muted)]" />
-                  </div>
-                  <span className="text-sm font-medium mt-2">Équipe A</span>
-                </div>
-                <span className="text-sm text-[var(--text-muted)]">vs</span>
-                <div className="flex flex-col items-center flex-1">
-                  <div className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center">
-                    <Trophy className="h-6 w-6 text-[var(--text-muted)]" />
-                  </div>
-                  <span className="text-sm font-medium mt-2">Équipe B</span>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-2">
-                <div className="flex-1 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-2 text-center">
-                  <span className="text-xs text-[var(--text-muted)]">Éq. A</span>
-                  <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--accent-gold)]">1.85</p>
-                </div>
-                <div className="flex-1 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-2 text-center">
-                  <span className="text-xs text-[var(--text-muted)]">Éq. B</span>
-                  <p className="font-[family-name:var(--font-mono)] font-semibold text-[var(--accent-gold)]">2.10</p>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
+      {/* Live matches */}
+      {liveMatches.length > 0 && (
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <Badge variant="live">EN DIRECT</Badge>
+            <h2 className="text-xl font-semibold">Matchs en cours</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {liveMatches.map((match) => (
+              <MatchCard key={match.id} match={match} odds={oddsMap[match.id]} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Upcoming section placeholder */}
+      {/* Upcoming matches */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Prochains matchs</h2>
@@ -81,19 +91,17 @@ export default function HomePage() {
             Voir tout
           </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <div className="flex items-center justify-between mb-3">
-                <Badge variant="league">{["LEC", "LPL", "LCS"][i - 1]}</Badge>
-                <Badge variant="upcoming">{["2h 30min", "5h 15min", "Demain"][i - 1]}</Badge>
-              </div>
-              <div className="h-20 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] flex items-center justify-center">
-                <span className="text-sm text-[var(--text-muted)]">Placeholder match {i}</span>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {upcomingMatches.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {upcomingMatches.map((match) => (
+              <MatchCard key={match.id} match={match} odds={oddsMap[match.id]} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-[var(--text-muted)]">Aucun match à venir pour le moment</p>
+          </div>
+        )}
       </section>
     </div>
   );

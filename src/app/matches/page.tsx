@@ -1,66 +1,48 @@
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/server";
+import type { LolMatch, Odd } from "@/types";
+import { MatchesClient } from "./matches-client";
 
-const leagues = ["Tous", "LCK", "LEC", "LPL", "LCS", "LFL", "Worlds"];
-const statuses = ["Tous", "En direct", "À venir", "Terminés"];
+function sortMatches(matches: LolMatch[]): LolMatch[] {
+  const statusOrder: Record<string, number> = {
+    live: 0,
+    upcoming: 1,
+    finished: 2,
+    cancelled: 3,
+  };
 
-export default function MatchesPage() {
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="text-2xl font-bold font-[family-name:var(--font-display)] mb-6">
-        Tous les matchs
-      </h1>
+  return [...matches].sort((a, b) => {
+    const orderA = statusOrder[a.status] ?? 99;
+    const orderB = statusOrder[b.status] ?? 99;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
+  });
+}
 
-      {/* Status filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-4">
-        {statuses.map((status, i) => (
-          <button
-            key={status}
-            type="button"
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all cursor-pointer ${
-              i === 0
-                ? "bg-[var(--accent-cyan)] text-[var(--bg-primary)]"
-                : "bg-white/5 text-[var(--text-muted)] hover:bg-white/10"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
+export default async function MatchesPage() {
+  const supabase = await createClient();
 
-      {/* League filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-6">
-        {leagues.map((league, i) => (
-          <button
-            key={league}
-            type="button"
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer border ${
-              i === 0
-                ? "bg-[var(--accent-gold)]/20 text-[var(--accent-gold)] border-[var(--accent-gold)]/40"
-                : "bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/10"
-            }`}
-          >
-            {league}
-          </button>
-        ))}
-      </div>
+  const { data: matchesRaw } = await supabase
+    .from("lol_matches")
+    .select("*")
+    .order("starts_at", { ascending: true });
 
-      {/* Skeleton match cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i}>
-            <div className="flex items-center justify-between mb-3">
-              <Badge variant="league">{leagues[(i % 6) + 1]}</Badge>
-              <Badge variant={i < 2 ? "live" : "upcoming"}>
-                {i < 2 ? "EN DIRECT" : "À venir"}
-              </Badge>
-            </div>
-            <div className="h-24 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] flex items-center justify-center">
-              <span className="text-sm text-[var(--text-muted)]">Match skeleton</span>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
+  const matches = sortMatches((matchesRaw ?? []) as unknown as LolMatch[]);
+
+  const matchIds = matches.map((m) => m.id);
+  let oddsMap: Record<string, Odd> = {};
+
+  if (matchIds.length > 0) {
+    const { data: oddsRaw } = await supabase
+      .from("odds")
+      .select("*")
+      .in("match_id", matchIds)
+      .eq("bet_type", "match_winner")
+      .eq("is_active", true);
+
+    for (const odd of (oddsRaw ?? []) as unknown as Odd[]) {
+      oddsMap[odd.match_id] = odd;
+    }
+  }
+
+  return <MatchesClient matches={matches} oddsMap={oddsMap} />;
 }

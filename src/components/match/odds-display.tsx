@@ -7,26 +7,29 @@ import { cn } from "@/lib/utils";
 interface OddsDisplayProps {
   odd: Odd;
   selectedSelection?: "a" | "b" | null;
-  onSelect?: (selection: "a" | "b") => void;
-  compact?: boolean;
+  onSelect?: (oddId: string, selection: "a" | "b") => void;
+  flashMap?: Record<string, "up" | "down">;
 }
 
-function OddsDisplay({ odd, selectedSelection, onSelect, compact }: OddsDisplayProps) {
+function OddsDisplay({ odd, selectedSelection, onSelect, flashMap }: OddsDisplayProps) {
+  const flashA = flashMap?.[`${odd.id}-a`];
+  const flashB = flashMap?.[`${odd.id}-b`];
+
   return (
-    <div className={cn("flex gap-2", compact ? "gap-1" : "gap-2")}>
+    <div className="flex gap-2">
       <OddsButton
         label={odd.label_a}
         value={odd.odd_a}
         selected={selectedSelection === "a"}
-        onClick={() => onSelect?.("a")}
-        compact={compact}
+        onClick={onSelect ? () => onSelect(odd.id, "a") : undefined}
+        flash={flashA}
       />
       <OddsButton
         label={odd.label_b}
         value={odd.odd_b}
         selected={selectedSelection === "b"}
-        onClick={() => onSelect?.("b")}
-        compact={compact}
+        onClick={onSelect ? () => onSelect(odd.id, "b") : undefined}
+        flash={flashB}
       />
     </div>
   );
@@ -37,35 +40,35 @@ function OddsButton({
   value,
   selected,
   onClick,
-  compact,
+  flash,
 }: {
   label: string;
   value: number;
   selected: boolean;
   onClick?: () => void;
-  compact?: boolean;
+  flash?: "up" | "down";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex-1 flex items-center justify-between rounded-lg border transition-all duration-200",
-        compact ? "px-2 py-1.5" : "px-3 py-2",
+        "flex-1 flex items-center justify-between rounded-lg border px-3 py-2 transition-all duration-200",
         selected
-          ? "border-[#00D4FF] bg-[#00D4FF]/10 text-[#00D4FF]"
-          : "border-white/[0.06] bg-white/[0.02] text-[#E2E8F0] hover:border-[#00D4FF]/30 hover:bg-white/[0.04]",
-        onClick && "cursor-pointer"
+          ? "border-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]"
+          : "border-[var(--border-subtle)] bg-white/[0.02] text-[var(--text-primary)] hover:border-[var(--accent-cyan)]/30 hover:bg-white/[0.04]",
+        onClick && "cursor-pointer",
+        flash === "up" && "odds-flash-up",
+        flash === "down" && "odds-flash-down"
       )}
     >
-      <span className={cn("text-xs truncate", compact ? "max-w-[60px]" : "max-w-[100px]")}>
-        {label}
-      </span>
-      <span className={cn(
-        "font-mono font-semibold",
-        compact ? "text-sm" : "text-sm",
-        selected ? "text-[#00D4FF]" : "text-[#C89B3C]"
-      )}>
+      <span className="text-xs truncate max-w-[100px]">{label}</span>
+      <span
+        className={cn(
+          "font-[family-name:var(--font-mono)] font-semibold text-sm",
+          selected ? "text-[var(--accent-cyan)]" : "text-[var(--accent-gold)]"
+        )}
+      >
         {formatOdd(value)}
       </span>
     </button>

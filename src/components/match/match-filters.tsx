@@ -25,7 +25,7 @@ function MatchFilters({
   onStatusChange,
 }: MatchFiltersProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
         {statusFilters.map((filter) => (
           <button
@@ -35,8 +35,8 @@ function MatchFilters({
             className={cn(
               "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all cursor-pointer",
               selectedStatus === filter.value
-                ? "bg-[#00D4FF] text-[#0A0E17]"
-                : "bg-white/5 text-[#64748B] hover:bg-white/10 hover:text-[#E2E8F0]"
+                ? "bg-[var(--accent-cyan)] text-[var(--bg-primary)]"
+                : "bg-white/5 text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)]"
             )}
           >
             {filter.label}
@@ -77,10 +77,10 @@ function LeagueChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer",
+        "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer border",
         selected
-          ? "bg-[#C89B3C]/20 text-[#C89B3C] border border-[#C89B3C]/40"
-          : "bg-white/5 text-[#64748B] border border-transparent hover:bg-white/10 hover:text-[#E2E8F0]"
+          ? "bg-[var(--accent-gold)]/20 text-[var(--accent-gold)] border-[var(--accent-gold)]/40"
+          : "bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/10 hover:text-[var(--text-primary)]"
       )}
     >
       {label}

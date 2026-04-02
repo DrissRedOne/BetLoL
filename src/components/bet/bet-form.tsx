@@ -65,7 +65,7 @@ function BetForm({ odd, balance, onSubmit }: BetFormProps) {
         <OddsDisplay
           odd={odd}
           selectedSelection={selection}
-          onSelect={setSelection}
+          onSelect={(_oddId, sel) => setSelection(sel)}
         />
       </div>
 
