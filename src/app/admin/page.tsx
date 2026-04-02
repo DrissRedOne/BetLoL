@@ -1,11 +1,88 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { formatAmount } from "@/lib/utils";
 import Link from "next/link";
-import { Shield, BarChart3, Trophy, Users } from "lucide-react";
+import { Shield, Ticket, TrendingUp, Users, Swords } from "lucide-react";
+import { AdminCharts } from "./admin-charts";
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") redirect("/");
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [
+    { data: todayBets },
+    { count: activeUsers },
+    { count: liveMatches },
+    { data: last30DaysBets },
+  ] = await Promise.all([
+    supabase
+      .from("bets")
+      .select("amount, created_at")
+      .gte("created_at", today.toISOString()),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true }),
+    supabase
+      .from("lol_matches")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "live"),
+    supabase
+      .from("bets")
+      .select("amount, created_at, match_id, lol_matches(league)")
+      .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .order("created_at", { ascending: true }),
+  ]);
+
+  const todayCount = todayBets?.length ?? 0;
+  const todayVolume = (todayBets ?? []).reduce(
+    (sum, b) => sum + ((b as { amount: number }).amount ?? 0),
+    0
+  );
+
+  // Aggregate daily volume for bar chart
+  const dailyMap = new Map<string, number>();
+  const leagueMap = new Map<string, number>();
+
+  for (const bet of (last30DaysBets ?? []) as Array<{
+    amount: number;
+    created_at: string;
+    lol_matches: { league: string } | null;
+  }>) {
+    const day = new Date(bet.created_at).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+    dailyMap.set(day, (dailyMap.get(day) ?? 0) + bet.amount);
+
+    const league = bet.lol_matches?.league ?? "Autre";
+    leagueMap.set(league, (leagueMap.get(league) ?? 0) + bet.amount);
+  }
+
+  const dailyData = Array.from(dailyMap.entries()).map(([date, volume]) => ({
+    date,
+    volume: Math.round(volume * 100) / 100,
+  }));
+
+  const leagueData = Array.from(leagueMap.entries()).map(([name, value]) => ({
+    name: name.toUpperCase(),
+    value: Math.round(value * 100) / 100,
+  }));
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-[var(--accent-gold)]" />
           <h1 className="text-2xl font-bold font-[family-name:var(--font-display)]">
@@ -28,59 +105,48 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats skeleton */}
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <div className="flex items-center gap-2 mb-1">
-            <Users className="h-4 w-4 text-[var(--accent-cyan)]" />
-            <p className="text-xs text-[var(--text-muted)]">Utilisateurs</p>
+            <Ticket className="h-4 w-4 text-[var(--accent-cyan)]" />
+            <p className="text-xs text-[var(--text-muted)]">Paris aujourd&apos;hui</p>
           </div>
           <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-cyan)]">
-            0
+            {todayCount}
           </p>
         </Card>
         <Card>
           <div className="flex items-center gap-2 mb-1">
-            <BarChart3 className="h-4 w-4 text-[var(--accent-gold)]" />
-            <p className="text-xs text-[var(--text-muted)]">Total paris</p>
+            <TrendingUp className="h-4 w-4 text-[var(--accent-green)]" />
+            <p className="text-xs text-[var(--text-muted)]">Volume aujourd&apos;hui</p>
+          </div>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-green)]">
+            {formatAmount(todayVolume)}
+          </p>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="h-4 w-4 text-[var(--accent-gold)]" />
+            <p className="text-xs text-[var(--text-muted)]">Utilisateurs</p>
           </div>
           <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-gold)]">
-            0
-          </p>
-        </Card>
-        <Card>
-          <p className="text-xs text-[var(--text-muted)]">Volume récent</p>
-          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-green)]">
-            0,00 €
+            {activeUsers ?? 0}
           </p>
         </Card>
         <Card>
           <div className="flex items-center gap-2 mb-1">
-            <Trophy className="h-4 w-4 text-[var(--accent-red)]" />
-            <p className="text-xs text-[var(--text-muted)]">Matchs</p>
+            <Swords className="h-4 w-4 text-[var(--accent-red)]" />
+            <p className="text-xs text-[var(--text-muted)]">Matchs en direct</p>
           </div>
-          <p className="text-2xl font-bold font-[family-name:var(--font-mono)]">
-            <span className="text-[var(--accent-red)]">0</span>
-            <span className="text-[var(--text-muted)] text-sm"> live</span>
+          <p className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--accent-red)]">
+            {liveMatches ?? 0}
           </p>
         </Card>
       </div>
 
-      {/* Charts placeholder */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h3 className="text-sm font-semibold mb-4">Volume quotidien (€)</h3>
-          <div className="h-[250px] rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] flex items-center justify-center">
-            <span className="text-sm text-[var(--text-muted)]">Graphique Recharts (placeholder)</span>
-          </div>
-        </Card>
-        <Card>
-          <h3 className="text-sm font-semibold mb-4">Répartition des paris</h3>
-          <div className="h-[250px] rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] flex items-center justify-center">
-            <span className="text-sm text-[var(--text-muted)]">Graphique Recharts (placeholder)</span>
-          </div>
-        </Card>
-      </div>
+      {/* Charts */}
+      <AdminCharts dailyData={dailyData} leagueData={leagueData} />
     </div>
   );
 }
