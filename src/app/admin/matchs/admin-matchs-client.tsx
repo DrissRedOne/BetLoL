@@ -119,6 +119,7 @@ function AdminMatchsClient({ matches: initialMatches }: { matches: LolMatch[] })
                     onClick={() => setOddsMatch(match)}
                     className="rounded-md p-1.5 text-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/10 transition-colors cursor-pointer"
                     title="Gérer les cotes"
+                    aria-label={`Gérer les cotes de ${match.team_a_name} vs ${match.team_b_name}`}
                   >
                     <Trophy className="h-4 w-4" />
                   </button>
@@ -127,6 +128,7 @@ function AdminMatchsClient({ matches: initialMatches }: { matches: LolMatch[] })
                     onClick={() => setEditMatch(match)}
                     className="rounded-md p-1.5 text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)]/10 transition-colors cursor-pointer"
                     title="Modifier"
+                    aria-label={`Modifier ${match.team_a_name} vs ${match.team_b_name}`}
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
