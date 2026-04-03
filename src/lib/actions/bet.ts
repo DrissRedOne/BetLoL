@@ -9,6 +9,29 @@ interface PlaceBetResponse {
   betId?: string;
 }
 
+// ── Rate limiter (in-memory, resets on server restart) ─────────
+// Max 10 bets per minute per user (V1)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 10;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+
+  entry.count++;
+  return true;
+}
+
 export async function placeBet(
   oddId: string,
   selection: "a" | "b",
@@ -29,6 +52,11 @@ export async function placeBet(
     return { success: false, error: "Vous devez être connecté pour parier" };
   }
 
+  // Rate limiting
+  if (!checkRateLimit(user.id)) {
+    return { success: false, error: "Trop de paris. Attendez une minute avant de réessayer." };
+  }
+
   const { data, error } = await supabase.rpc("place_bet", {
     p_user_id: user.id,
     p_odd_id: validation.data.oddId,
@@ -37,7 +65,6 @@ export async function placeBet(
   });
 
   if (error) {
-    // Extract clean error message from Postgres exception
     const message = error.message
       .replace(/^.*RAISE EXCEPTION\s*/, "")
       .replace(/\\n.*$/, "")

@@ -1,6 +1,13 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  createMatchSchema,
+  updateMatchSchema,
+  upsertOddSchema,
+  settleMatchSchema,
+  cancelMatchSchema,
+} from "@/lib/validators/admin";
 
 interface ActionResult {
   success: boolean;
@@ -37,6 +44,9 @@ export interface CreateMatchInput {
 
 export async function createMatch(input: CreateMatchInput): Promise<ActionResult & { matchId?: string }> {
   try {
+    const v = createMatchSchema.safeParse(input);
+    if (!v.success) return { success: false, error: v.error.issues[0]?.message ?? "Données invalides" };
+
     const supabase = await requireAdmin();
 
     const { data, error } = await supabase
@@ -79,6 +89,9 @@ export interface UpdateMatchInput {
 
 export async function updateMatch(input: UpdateMatchInput): Promise<ActionResult> {
   try {
+    const v = updateMatchSchema.safeParse(input);
+    if (!v.success) return { success: false, error: v.error.issues[0]?.message ?? "Données invalides" };
+
     const supabase = await requireAdmin();
 
     const { id, ...fields } = input;
@@ -113,6 +126,9 @@ export interface UpsertOddInput {
 
 export async function upsertOdd(input: UpsertOddInput): Promise<ActionResult> {
   try {
+    const v = upsertOddSchema.safeParse(input);
+    if (!v.success) return { success: false, error: v.error.issues[0]?.message ?? "Données invalides" };
+
     const supabase = await requireAdmin();
 
     // Check if an odd already exists for this match + bet_type + map_number
@@ -174,6 +190,9 @@ export interface SettleResult {
 
 export async function settleMatch(matchId: string, winner: "team_a" | "team_b"): Promise<SettleResult> {
   try {
+    const v = settleMatchSchema.safeParse({ matchId, winner });
+    if (!v.success) return { success: false, error: v.error.issues[0]?.message ?? "Données invalides" };
+
     const supabase = await requireAdmin();
 
     const { data, error } = await supabase.rpc("settle_match", {
@@ -211,6 +230,9 @@ export interface CancelResult {
 
 export async function cancelMatch(matchId: string): Promise<CancelResult> {
   try {
+    const v = cancelMatchSchema.safeParse({ matchId });
+    if (!v.success) return { success: false, error: v.error.issues[0]?.message ?? "Données invalides" };
+
     const supabase = await requireAdmin();
 
     const { data, error } = await supabase.rpc("cancel_match", {
