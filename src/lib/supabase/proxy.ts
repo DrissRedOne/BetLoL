@@ -5,9 +5,17 @@ import type { Database } from "@/types";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // Env vars not available — skip auth, let request through
+    return { user: null, supabaseResponse, supabase: null as unknown as ReturnType<typeof createServerClient<Database>> };
+  }
+
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -26,7 +34,6 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh the session — important for token refresh
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -17,42 +17,50 @@ import {
 } from "lucide-react";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-
-  const [{ data: liveRaw }, { data: upcomingRaw }] = await Promise.all([
-    supabase
-      .from("lol_matches")
-      .select("*")
-      .eq("status", "live")
-      .order("starts_at", { ascending: true })
-      .limit(6),
-    supabase
-      .from("lol_matches")
-      .select("*")
-      .eq("status", "upcoming")
-      .order("starts_at", { ascending: true })
-      .limit(6),
-  ]);
-
-  const liveMatches = (liveRaw ?? []) as unknown as LolMatch[];
-  const upcomingMatches = (upcomingRaw ?? []) as unknown as LolMatch[];
-  const heroMatches = upcomingMatches.slice(0, 3);
-
-  const allIds = [...liveMatches, ...upcomingMatches].map((m) => m.id);
+  let liveMatches: LolMatch[] = [];
+  let upcomingMatches: LolMatch[] = [];
   const oddsMap: Record<string, Odd> = {};
 
-  if (allIds.length > 0) {
-    const { data: oddsRaw } = await supabase
-      .from("odds")
-      .select("*")
-      .in("match_id", allIds)
-      .eq("bet_type", "match_winner")
-      .eq("is_active", true);
+  try {
+    const supabase = await createClient();
+
+    const [{ data: liveRaw }, { data: upcomingRaw }] = await Promise.all([
+      supabase
+        .from("lol_matches")
+        .select("*")
+        .eq("status", "live")
+        .order("starts_at", { ascending: true })
+        .limit(6),
+      supabase
+        .from("lol_matches")
+        .select("*")
+        .eq("status", "upcoming")
+        .order("starts_at", { ascending: true })
+        .limit(6),
+    ]);
+
+    liveMatches = (liveRaw ?? []) as unknown as LolMatch[];
+    upcomingMatches = (upcomingRaw ?? []) as unknown as LolMatch[];
+
+    const allIds = [...liveMatches, ...upcomingMatches].map((m) => m.id);
+
+    if (allIds.length > 0) {
+      const { data: oddsRaw } = await supabase
+        .from("odds")
+        .select("*")
+        .in("match_id", allIds)
+        .eq("bet_type", "match_winner")
+        .eq("is_active", true);
 
     for (const odd of (oddsRaw ?? []) as unknown as Odd[]) {
-      oddsMap[odd.match_id] = odd;
+        oddsMap[odd.match_id] = odd;
+      }
     }
+  } catch (error) {
+    console.error("[HomePage] Failed to fetch matches:", error);
   }
+
+  const heroMatches = upcomingMatches.slice(0, 3);
 
   return (
     <div>
