@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { createMatch, updateMatch, upsertOdd, type CreateMatchInput, type UpsertOddInput } from "@/lib/actions/admin";
+import { triggerSyncMatches } from "@/lib/actions/sync";
 import { LOL_LEAGUES, BET_TYPES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { Plus, Pencil, Trophy, ChevronLeft } from "lucide-react";
+import { Plus, Pencil, Trophy, ChevronLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 const statusLabels: Record<string, string> = {
@@ -50,10 +51,29 @@ function AdminMatchsClient({ matches: initialMatches }: { matches: LolMatch[] })
             Gestion des matchs
           </h1>
         </div>
-        <Button onClick={() => setCreateOpen(true)} size="sm">
-          <Plus className="h-4 w-4" />
-          Ajouter un match
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const res = await triggerSyncMatches();
+              if (res.success) {
+                const d = res.data as Record<string, number>;
+                toast(`Sync: ${d.matches_synced} matchs, ${d.odds_updated} cotes`, "success");
+                router.refresh();
+              } else {
+                toast(res.error ?? "Erreur sync", "error");
+              }
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Synchroniser PandaScore
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} size="sm">
+            <Plus className="h-4 w-4" />
+            Ajouter un match
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

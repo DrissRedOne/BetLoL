@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { settleMatch, cancelMatch } from "@/lib/actions/admin";
+import { triggerSyncResults } from "@/lib/actions/sync";
 import { formatAmount } from "@/lib/utils";
-import { ChevronLeft, Trophy, Ban, CheckCircle } from "lucide-react";
+import { ChevronLeft, Trophy, Ban, CheckCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 function AdminResultatsClient({ matches }: { matches: LolMatch[] }) {
@@ -32,6 +33,24 @@ function AdminResultatsClient({ matches }: { matches: LolMatch[] }) {
         <h1 className="text-2xl font-bold font-[family-name:var(--font-display)]">
           Déclarer les résultats
         </h1>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={async () => {
+            const res = await triggerSyncResults();
+            if (res.success) {
+              const d = res.data as Record<string, number>;
+              toast(`Vérifié: ${d.checked} matchs, ${d.settled} résolus`, "success");
+              router.refresh();
+            } else {
+              toast(res.error ?? "Erreur", "error");
+            }
+          }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Vérifier via PandaScore
+        </Button>
       </div>
 
       {matches.length === 0 ? (
