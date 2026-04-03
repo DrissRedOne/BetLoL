@@ -27,12 +27,16 @@ export function useToast(): ToastContextValue {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const toast = useCallback((message: string, variant: ToastVariant = "info") => {
+  const toast = useCallback((message: string, variant: ToastVariant = "info", durationMs = 4000) => {
     const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message, variant }]);
+    setToasts((prev) => {
+      const next = [...prev, { id, message, variant }];
+      // Max 3 visible toasts
+      return next.length > 3 ? next.slice(-3) : next;
+    });
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, durationMs);
   }, []);
 
   const dismiss = useCallback((id: string) => {
