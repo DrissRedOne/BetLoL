@@ -417,6 +417,20 @@ export interface Database {
         };
         Returns: CancelMatchResult;
       };
+      simulate_deposit: {
+        Args: {
+          p_user_id: string;
+          p_amount: number;
+        };
+        Returns: { new_balance: number };
+      };
+      simulate_withdrawal: {
+        Args: {
+          p_user_id: string;
+          p_amount: number;
+        };
+        Returns: { new_balance: number };
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

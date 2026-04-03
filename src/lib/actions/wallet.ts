@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { depositSchema, withdrawalSchema } from "@/lib/validators/bet";
 
 // TODO: intégrer Stripe Checkout pour la production
-// En V1, dépôts et retraits sont simulés via insertion directe en DB.
+// En V1, dépôts et retraits sont simulés via des fonctions RPC atomiques.
 
 interface WalletResponse {
   success: boolean;
@@ -24,39 +24,18 @@ export async function simulateDeposit(amount: number): Promise<WalletResponse> {
     return { success: false, error: "Vous devez être connecté" };
   }
 
-  // Get current balance
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("balance")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
-    return { success: false, error: "Profil introuvable" };
-  }
-
-  const newBalance = profile.balance + validation.data.amount;
-
-  // Update balance
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ balance: newBalance })
-    .eq("id", user.id);
-
-  if (updateError) {
-    return { success: false, error: "Erreur lors de la mise à jour du solde" };
-  }
-
-  // Insert transaction
-  await supabase.from("transactions").insert({
-    user_id: user.id,
-    type: "deposit",
-    amount: validation.data.amount,
-    balance_after: newBalance,
-    description: `Dépôt de ${validation.data.amount.toFixed(2)}€ (simulation)`,
+  const { data, error } = await supabase.rpc("simulate_deposit", {
+    p_user_id: user.id,
+    p_amount: validation.data.amount,
   });
 
-  return { success: true, newBalance };
+  if (error) {
+    const msg = error.message.replace(/^.*RAISE EXCEPTION\s*/, "").trim();
+    return { success: false, error: msg || "Erreur lors du dépôt" };
+  }
+
+  const result = data as unknown as { new_balance: number } | null;
+  return { success: true, newBalance: result?.new_balance ?? 0 };
 }
 
 export async function simulateWithdrawal(amount: number): Promise<WalletResponse> {
@@ -71,38 +50,16 @@ export async function simulateWithdrawal(amount: number): Promise<WalletResponse
     return { success: false, error: "Vous devez être connecté" };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("balance")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
-    return { success: false, error: "Profil introuvable" };
-  }
-
-  if (profile.balance < validation.data.amount) {
-    return { success: false, error: `Solde insuffisant (${profile.balance.toFixed(2)}€)` };
-  }
-
-  const newBalance = profile.balance - validation.data.amount;
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ balance: newBalance })
-    .eq("id", user.id);
-
-  if (updateError) {
-    return { success: false, error: "Erreur lors de la mise à jour du solde" };
-  }
-
-  await supabase.from("transactions").insert({
-    user_id: user.id,
-    type: "withdrawal",
-    amount: validation.data.amount,
-    balance_after: newBalance,
-    description: `Retrait de ${validation.data.amount.toFixed(2)}€ (simulation)`,
+  const { data, error } = await supabase.rpc("simulate_withdrawal", {
+    p_user_id: user.id,
+    p_amount: validation.data.amount,
   });
 
-  return { success: true, newBalance };
+  if (error) {
+    const msg = error.message.replace(/^.*RAISE EXCEPTION\s*/, "").trim();
+    return { success: false, error: msg || "Erreur lors du retrait" };
+  }
+
+  const result = data as unknown as { new_balance: number } | null;
+  return { success: true, newBalance: result?.new_balance ?? 0 };
 }
