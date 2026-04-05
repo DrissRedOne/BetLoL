@@ -13,7 +13,7 @@ interface Toast {
 }
 
 interface ToastContextValue {
-  toast: (message: string, variant?: ToastVariant) => void;
+  toast: (message: string, variant?: ToastVariant, durationMs?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
