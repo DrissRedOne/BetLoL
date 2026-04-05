@@ -54,7 +54,7 @@ export function useRealtimeOdds(matchId: string): UseRealtimeOddsReturn {
     fetchOdds();
 
     const channel = supabase
-      .channel(`odds-${matchId}`)
+      .channel(`odds-${matchId}-${Date.now()}`)
       .on(
         "postgres_changes",
         {

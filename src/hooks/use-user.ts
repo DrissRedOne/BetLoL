@@ -81,7 +81,7 @@ export function useUser(): UseUserReturn {
 
     const supabase = supabaseRef.current;
     const channel = supabase
-      .channel(`profile-${user.id}`)
+      .channel(`profile-${user.id}-${Date.now()}`)
       .on(
         "postgres_changes",
         {

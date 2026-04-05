@@ -20,7 +20,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const supabase = createClient();
 
     const betChannel = supabase
-      .channel(`bet-notif-${userId}`)
+      .channel(`bet-notif-${userId}-${Date.now()}`)
       .on(
         "postgres_changes",
         {

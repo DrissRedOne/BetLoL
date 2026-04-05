@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export function useBalance(userId: string | null) {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
+  const channelRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -15,23 +16,22 @@ export function useBalance(userId: string | null) {
 
     const supabase = createClient();
 
-    async function fetchBalance() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("balance")
-        .eq("id", userId!)
-        .single();
+    // Use unique channel name to avoid collision on re-renders
+    const channelName = `balance-${userId}-${Date.now()}`;
+    channelRef.current = channelName;
 
-      if (!error && data) {
-        setBalance(data.balance);
-      }
-      setLoading(false);
-    }
-
-    fetchBalance();
+    supabase
+      .from("profiles")
+      .select("balance")
+      .eq("id", userId)
+      .single()
+      .then(({ data }) => {
+        if (data) setBalance(data.balance);
+        setLoading(false);
+      });
 
     const channel = supabase
-      .channel(`balance-${userId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
